@@ -52,25 +52,27 @@ def cwt(x,wavelet,width):
 		y[i,:]=np.convolve(np.array(x), w, mode='same')
 	return y
 
-def pls(cwt1,cwt2,widths,eps=1,nc=8):
+def bandpls(cwt1,cwt2,widths,eps=1,nc=8):
 	"""
 	Wavelet phase-lock analysis
 	Detects transent moments of phase locking at different scales by
 	comparing instantaneous frequencies for a scaling value
 	""" 
 	N=len(cwt1)
-	dz=np.exp(1j*(np.angle(cwt1)-np.angle(cwt2)))
+	dph=np.angle(cwt1)-np.angle(cwt2)
+	dph+=(np.abs(cwt1)*np.abs(cwt2)==0).astype(int)*np.random.rand(N)*2*pi
+	dz=np.exp(1j*dph)
 	f=eps/widths
 	d=np.ceil(nc/f)
-	r=np.zeros(N)
-	ph=np.zeros(N)
-	for t in range(N):
-		phi=np.mean(dz[max([0,t-d/2]):min([N,t+1+d/2])])
-		r[t] = np.abs(phi)
-		ph[t] = np.mod(np.angle(phi)+pi,2*pi)-pi
+	
+	win=np.ones(d)/d
+	phi=np.convolve(dz,win, mode='same')
+	r=np.abs(phi)
+	ph=np.mod(np.angle(phi)+pi,2*pi)-pi
+
 	return r,ph
 	
-def bandpls(cwt1,cwt2,widths,eps=1,nc=8):
+def pls(cwt1,cwt2,widths,eps=1,nc=8):
 	"""
 	Wavelet phase-lock analysis
 	Detects transent moments of phase locking at different scales by
@@ -80,7 +82,7 @@ def bandpls(cwt1,cwt2,widths,eps=1,nc=8):
 	r=np.zeros((M,N))
 	ph=np.zeros((M,N))
 	for s in range(M):
-		(r[s,:],ph[s,:])=pls(cwt1[s,:],cwt2[s,:],widths[s],eps,nc)
+		(r[s,:],ph[s,:])=bandpls(cwt1[s,:],cwt2[s,:],widths[s],eps,nc)
 			
 	return r,ph
 
